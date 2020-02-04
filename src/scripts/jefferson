@@ -256,26 +256,14 @@ NODETYPES = {
     JFFS2_NODETYPE_PADDING: 'JFFS2_NODETYPE_PADDING'
 }
 
-
-def set_endianness(endianness):
-    Jffs2_device_node_new.__fmt__ = endianness + Jffs2_device_node_new.__fmt__[1:]
-    Jffs2_device_node_old.__fmt__ = endianness + Jffs2_device_node_old.__fmt__[1:]
-
-    for node in NODETYPES.values():
-        if isinstance(node, cstruct.CStructMeta):
-            node.__fmt__ = endianness + node.__fmt__[1:]
-
-
-def scan_fs(content, endianness, verbose=False):
-    set_endianness(endianness)
+def scan_fs(content, verbose=False):
     summaries = []
     pos = 0
-    jffs2_magic_bitmask_str = struct.pack(endianness + 'H', JFFS2_MAGIC_BITMASK)
+    jffs2_magic_bitmask_str = struct.pack(cstruct.LITTLE_ENDIAN + 'H', JFFS2_MAGIC_BITMASK)
     fs_index = 0
 
     fs = {}
     fs[fs_index] = {}
-    fs[fs_index]["endianness"] = endianness
     fs[fs_index][JFFS2_NODETYPE_INODE] = []
     fs[fs_index][JFFS2_NODETYPE_DIRENT] = []
     fs[fs_index][JFFS2_NODETYPE_XATTR] = []
@@ -307,7 +295,6 @@ def scan_fs(content, endianness, verbose=False):
                         print 'duplicate inode use detected!!!'
                         fs_index += 1
                         fs[fs_index] = {}
-                        fs[fs_index]["endianness"] = endianness
                         fs[fs_index][JFFS2_NODETYPE_INODE] = []
                         fs[fs_index][JFFS2_NODETYPE_DIRENT] = []
                         fs[fs_index][JFFS2_NODETYPE_XATTR] = []
@@ -371,8 +358,6 @@ def get_device(inode):
 
 def dump_fs(fs, target):
     node_dict = {}
-
-    set_endianness(fs["endianness"])
 
     for dirent in fs[JFFS2_NODETYPE_DIRENT]:
         dirent.inodes = []
@@ -470,8 +455,7 @@ def main():
         os.mkdir(dest_path)
 
     content = open(args.filesystem, 'rb').read()
-    fs_list = scan_fs(content, cstruct.BIG_ENDIAN, verbose=args.verbose)
-    fs_list += scan_fs(content, cstruct.LITTLE_ENDIAN, verbose=args.verbose)
+    fs_list = scan_fs(content, verbose=args.verbose)
 
     fs_index = 1
     for fs in fs_list:
@@ -481,13 +465,6 @@ def main():
         dest_path_fs = os.path.join(dest_path, 'fs_%i' % fs_index)
         print 'dumping fs #%i to %s' % (fs_index, dest_path_fs)
         for key, value in fs.iteritems():
-            if key == "endianness":
-                if value == cstruct.BIG_ENDIAN:
-                    print 'Endianness: Big'
-                elif value == cstruct.LITTLE_ENDIAN:
-                    print 'Endianness: Little'
-                continue
-
             print '%s count: %i' % (NODETYPES[key].__name__, len(value))
 
         if not os.path.exists(dest_path_fs):
