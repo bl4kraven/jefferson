@@ -5,8 +5,8 @@ import stat
 import os
 import zlib
 import binascii
+import shutil
 import lzo
-
 import cstruct
 import lzma
 
@@ -478,8 +478,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', help='increase output verbosity',
                         action="store_true")
-    parser.add_argument('-f', '--force', help='overwrite destination directory',
-                        action="store_true")
+    #parser.add_argument('-f', '--force', help='overwrite destination directory',
+    #                    action="store_true")
     parser.add_argument('filesystem', type=str,
                         help="path to filesystem")
     parser.add_argument('-d', '--dest', type=str, default='jffs2-root',
@@ -489,11 +489,8 @@ def main():
     dest_path = os.path.join(os.getcwd(), args.dest)
 
     if os.path.exists(dest_path):
-        if not args.force:
-            print 'Destination path already exists!'
-            return
-    else:
-        os.mkdir(dest_path)
+        shutil.rmtree(dest_path)
+    os.mkdir(dest_path)
 
     content = open(args.filesystem, 'rb').read()
     fs_list = scan_fs(content, verbose=args.verbose)
